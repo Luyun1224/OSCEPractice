@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSCE 管理者後台</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+        }
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6);
+            display: flex; align-items: center; justify-content: center; z-index: 50; transition: opacity 0.3s ease;
+        }
+        .form-label {
+            display: block; margin-bottom: 0.5rem; font-weight: 600; color: #374151;
+        }
+        .form-input, .form-textarea {
+            width: 100%; padding: 0.5rem 0.75rem; border: 1px solid #D1D5DB; border-radius: 0.375rem;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .form-input:focus, .form-textarea:focus {
+            outline: none; border-color: #3B82F6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+        }
+        .form-textarea { min-height: 120px; }
+        .dept-checkbox-label {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.5rem 1rem;
+            border: 1px solid #D1D5DB;
+            border-radius: 9999px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dept-checkbox-label:hover {
+            background-color: #f9fafb;
+        }
+        .dept-checkbox:checked + .dept-checkbox-label {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="admin-app" class="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-md">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">管理者後台</h1>
+                <p class="mt-1 text-lg text-gray-600">教案庫管理系統</p>
+            </div>
+            <button onclick="showCaseForm()" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition-colors shadow-lg transform hover:scale-105">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                </svg>
+                新增案例
+            </button>
+        </header>
+        <main id="admin-case-list" class="space-y-4">
+            <!-- Admin case list will be generated here -->
+        </main>
+    </div>
+
+    <!-- Case Form Modal -->
+    <div id="case-form-modal" class="modal-overlay hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+            <h2 id="case-form-title" class="text-2xl font-bold text-gray-800 mb-6">新增案例</h2>
+            <form id="case-form" class="space-y-6">
+                <input type="hidden" id="case-id-input">
+                
+                <!-- Department Selection -->
+                <div>
+                    <label class="form-label">教案科別 (Department)</label>
+                    <div id="department-checkboxes" class="flex flex-wrap gap-3">
+                        <!-- Checkboxes will be generated here -->
+                    </div>
+                </div>
+
+                <div><label for="case-title" class="form-label">教案主題 (Title)</label><input type="text" id="case-title" class="form-input" placeholder="例如：53歲女性，咳嗽"></div>
+                <div><label for="case-task" class="form-label">學員任務 (Student's Task)</label><textarea id="case-task" class="form-textarea" placeholder="請描述學員在此案例中需要完成的任務。"></textarea></div>
+                <div><label for="case-sp-profile" class="form-label">標準化病人設定 (SP Profile)</label><textarea id="case-sp-profile" class="form-textarea" placeholder="描述SP的背景、個性、情緒狀態等。"></textarea></div>
+                <div><label for="case-script" class="form-label">標準化病人腳本 (SP Script)</label><textarea id="case-script" class="form-textarea" placeholder="詳細的病人陳述，包含對各種問題的回應。"></textarea></div>
+                <div><label for="case-checklist" class="form-label">評量重點 (Checklist)</label><textarea id="case-checklist" class="form-textarea" placeholder="每行一個評量重點，用來評估學員表現。"></textarea></div>
+            </form>
+            <div class="flex justify-end gap-4 mt-8">
+                <button onclick="hideCaseForm()" class="px-6 py-2 text-sm font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button>
+                <button onclick="saveCase()" class="px-6 py-2 text-sm font-semibold text-white bg-blue-600 rounded-lg hover:bg-blue-700">儲存案例</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div id="delete-confirm-modal" class="modal-overlay hidden">
+        <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-sm"><h2 class="text-2xl font-bold text-center text-gray-800 mb-4">確認刪除</h2><p id="delete-confirm-text" class="text-center text-gray-600 mb-8">您確定要刪除這個案例嗎？此操作無法復原。</p><div class="flex justify-center gap-4"><button onclick="hideDeleteConfirm()" class="px-6 py-2 font-semibold text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300">取消</button><button id="confirm-delete-btn" class="px-6 py-2 font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700">確定刪除</button></div></div>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const getEl = (id) => document.getElementById(id);
+        const adminCaseList = getEl('admin-case-list');
+        const caseFormModal = getEl('case-form-modal');
+        const deleteConfirmModal = getEl('delete-confirm-modal');
+        const caseForm = getEl('case-form');
+        const caseFormTitle = getEl('case-form-title');
+        const caseIdInput = getEl('case-id-input');
+        const caseTitleInput = getEl('case-title');
+        const caseTaskInput = getEl('case-task');
+        const caseSpProfileInput = getEl('case-sp-profile');
+        const caseScriptInput = getEl('case-script');
+        const caseChecklistInput = getEl('case-checklist');
+        const departmentCheckboxesContainer = getEl('department-checkboxes');
+
+        // --- Data ---
+        const departments = {
+            internal: '內科',
+            surgery: '外科',
+            obgyn: '婦產科',
+            peds: '兒科',
+            er: '急診科'
+        };
+
+        let caseData = {
+            1: {
+                departments: ['internal'],
+                title: "53歲女性，咳嗽",
+                task: "請對這位病人進行問診，了解其咳嗽的病史，並提出初步的鑑別診斷與檢查計畫。",
+                spProfile: "病人為中年女性，因長期咳嗽且看到痰中有血絲而感到焦慮與擔憂。態度合作但略顯緊張。",
+                script: "主訴: 咳嗽已兩個多月，有痰，帶血絲，不定時咳嗽，咳嗽時會胸部疼痛。門診求醫時，胸部X光發現有異常，因而安排住院。\n生命徵象: 血壓:120/80 mmHg、體溫:36.5度、脈搏:70次/分鐘。",
+                checklist: ["詢問咳嗽持續時間", "詢問痰的性質與顏色", "詢問是否咳血", "詢問是否伴隨胸痛", "詢問過去檢查史(X光)"]
+            },
+            60: {
+                departments: ['surgery', 'er'],
+                title: "58歲男性，頭部外傷",
+                task: "請對這位急診病人進行快速的病史詢問與評估，判斷其危險性並安排緊急處置。",
+                spProfile: "病人為工地主管，個性較為急躁，因頭痛與噁心而顯得不耐煩，但仍能配合回答問題。",
+                script: "主訴: 今天下午不慎於工地的二樓樓梯跌落(約半層樓高)，曾短暫失去意識約30秒，現左側臉頰淤青，左眼熊貓眼。\n症狀: 現在頭很痛、頭暈、很想吐。\n個人史: 每天一包菸，一星期約與朋友喝一次酒。",
+                checklist: ["詢問外傷機制與時間", "詢問意識喪失情況", "詢問目前神經學症狀", "詢問個人史(菸酒)"]
+            },
+        };
+
+        // --- Core Functions ---
+        function populateAdminView() {
+            adminCaseList.innerHTML = '';
+            if (Object.keys(caseData).length === 0) {
+                adminCaseList.innerHTML = `<div class="text-center py-16 bg-white rounded-xl shadow-md">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium text-gray-900">尚無案例</h3>
+                    <p class="mt-1 text-sm text-gray-500">點擊「新增案例」來建立您的第一個教案。</p>
+                </div>`;
+                return;
+            }
+
+            for (const id in caseData) {
+                const data = caseData[id];
+                const departmentTags = data.departments.map(deptKey => 
+                    `<span class="tag bg-blue-100 text-blue-800">${departments[deptKey]}</span>`
+                ).join('');
+
+                adminCaseList.innerHTML += `
+                    <div class="bg-white p-6 rounded-xl shadow-md transition hover:shadow-lg">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <h3 class="text-xl font-bold text-gray-900">${data.title}</h3>
+                                <div class="mt-2 flex flex-wrap gap-2">${departmentTags}</div>
+                            </div>
+                            <div class="flex gap-4 flex-shrink-0 ml-4">
+                                <button onclick="showCaseForm(${id})" class="text-sm text-blue-600 hover:text-blue-800 font-semibold">編輯</button>
+                                <button onclick="confirmDeleteCase(${id})" class="text-sm text-red-600 hover:text-red-800 font-semibold">刪除</button>
+                            </div>
+                        </div>
+                        <p class="mt-4 text-gray-600 text-sm">${data.task}</p>
+                    </div>`;
+            }
+        }
+
+        // --- Modal & Form Logic ---
+        function showCaseForm(caseId = null) {
+            caseForm.reset();
+            // Populate department checkboxes
+            departmentCheckboxesContainer.innerHTML = '';
+            for (const key in departments) {
+                departmentCheckboxesContainer.innerHTML += `
+                    <div>
+                        <input type="checkbox" id="dept-${key}" name="departments" value="${key}" class="hidden dept-checkbox">
+                        <label for="dept-${key}" class="dept-checkbox-label">${departments[key]}</label>
+                    </div>
+                `;
+            }
+
+            if (caseId && caseData[caseId]) { // Edit mode
+                const data = caseData[caseId];
+                caseFormTitle.textContent = `編輯案例 #${caseId}`;
+                caseIdInput.value = caseId;
+                caseTitleInput.value = data.title;
+                caseTaskInput.value = data.task;
+                caseSpProfileInput.value = data.spProfile;
+                caseScriptInput.value = data.script;
+                caseChecklistInput.value = data.checklist.join('\n');
+                // Check the correct department boxes
+                data.departments.forEach(deptKey => {
+                    const checkbox = document.getElementById(`dept-${deptKey}`);
+                    if (checkbox) checkbox.checked = true;
+                });
+            } else { // Add mode
+                caseFormTitle.textContent = '新增案例';
+                caseIdInput.value = '';
+            }
+            caseFormModal.classList.remove('hidden');
+        }
+
+        function hideCaseForm() { caseFormModal.classList.add('hidden'); }
+
+        function saveCase() {
+            let id = caseIdInput.value;
+            if (!id) { id = Date.now(); } // Use timestamp for a unique ID
+
+            const selectedDepartments = [];
+            document.querySelectorAll('input[name="departments"]:checked').forEach(checkbox => {
+                selectedDepartments.push(checkbox.value);
+            });
+
+            const newCase = {
+                departments: selectedDepartments,
+                title: caseTitleInput.value,
+                task: caseTaskInput.value,
+                spProfile: caseSpProfileInput.value,
+                script: caseScriptInput.value,
+                checklist: caseChecklistInput.value.split('\n').filter(line => line.trim() !== ''),
+            };
+            
+            caseData[id] = newCase;
+            hideCaseForm();
+            populateAdminView();
+        }
+
+        function confirmDeleteCase(caseId) {
+            getEl('delete-confirm-text').textContent = `您確定要刪除案例 #${caseId}: "${caseData[caseId].title}" 嗎？此操作無法復原。`;
+            getEl('confirm-delete-btn').onclick = () => executeDelete(caseId);
+            deleteConfirmModal.classList.remove('hidden');
+        }
+
+        function hideDeleteConfirm() { deleteConfirmModal.classList.add('hidden'); }
+
+        function executeDelete(caseId) {
+            delete caseData[caseId];
+            hideDeleteConfirm();
+            populateAdminView();
+        }
+
+        // --- Initial Load ---
+        window.onload = () => {
+            populateAdminView();
+        };
+    </script>
+</body>
+</html>
